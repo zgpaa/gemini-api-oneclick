@@ -1,0 +1,23 @@
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y curl git supervisor procps && rm -rf /var/lib/apt/lists/*
+
+COPY pyproject.toml ./
+COPY lib/gemini_webapi ./gemini_webapi/
+RUN uv sync
+
+COPY app/ ./
+
+RUN mkdir -p /app/state/worker-events /app/envs /var/log/supervisor
+
+ENV PYTHONPATH=/app
+ENV ONECLICK_STATE_DIR=/app/state
+ENV ONECLICK_MODE=worker
+
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+EXPOSE 8000
+
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
